@@ -40,6 +40,7 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
+	// методы без контекста устарели!
 	res, err := stmt.ExecContext(ctx, email, passHash)
 	if err != nil {
 		var sqliteErr sqlite3.Error
@@ -75,7 +76,6 @@ func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
 		}
-
 		return models.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 

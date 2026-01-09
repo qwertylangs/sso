@@ -11,6 +11,7 @@ import (
 	"grpc-service-ref/internal/lib/jwt"
 	"grpc-service-ref/internal/lib/logger/sl"
 	"grpc-service-ref/internal/storage"
+	"grpc-service-ref/internal/storage/sqlite"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -45,24 +46,22 @@ type AppProvider interface {
 	App(ctx context.Context, appID int) (models.App, error)
 }
 
+// New creates new auth service.
 func New(
 	log *slog.Logger,
-	userSaver UserSaver,
-	userProvider UserProvider,
-	appProvider AppProvider,
+	storage *sqlite.Storage,
 	tokenTTL time.Duration,
 ) *Auth {
 	return &Auth{
-		usrSaver:    userSaver,
-		usrProvider: userProvider,
+		usrSaver:    storage,
+		usrProvider: storage,
 		log:         log,
-		appProvider: appProvider,
+		appProvider: storage,
 		tokenTTL:    tokenTTL,
 	}
 }
 
 // Login checks if user with given credentials exists in the system and returns access token.
-//
 // If user exists, but password is incorrect, returns error.
 // If user doesn't exist, returns error.
 func (a *Auth) Login(
@@ -80,7 +79,10 @@ func (a *Auth) Login(
 
 	log.Info("attempting to login user")
 
-	user, err := a.usrProvider.User(ctx, email)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	user, err := a.usrProvider.User(timeoutCtx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			a.log.Warn("user not found", sl.Err(err))
@@ -99,7 +101,7 @@ func (a *Auth) Login(
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 
-	app, err := a.appProvider.App(ctx, appID)
+	app, err := a.appProvider.App(timeoutCtx, appID)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
