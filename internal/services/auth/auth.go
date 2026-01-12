@@ -103,6 +103,7 @@ func (a *Auth) Login(
 
 	app, err := a.appProvider.App(timeoutCtx, appID)
 	if err != nil {
+		a.log.Error("failed to get app", sl.Err(err))
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 

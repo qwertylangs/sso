@@ -19,7 +19,7 @@ type Storage struct {
 func New(storagePath string) (*Storage, error) {
 	const op = "storage.sqlite.New"
 
-	db, err := sql.Open("sqlite3", storagePath)
+	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_journal_mode=WAL&_busy_timeout=5000", storagePath))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
